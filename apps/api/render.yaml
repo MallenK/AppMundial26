@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: appmundial26-api
+    runtime: node
+    plan: free  # upgrade to "starter" ($7/mo) to eliminate cold starts
+    region: frankfurt  # closest to Spain/Europe
+    buildCommand: pnpm install && pnpm build
+    startCommand: node dist/app.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false  # set in Render dashboard
+      - key: BETTER_AUTH_SECRET
+        sync: false
+      - key: BETTER_AUTH_URL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: API_FOOTBALL_KEY
+        sync: false
+      - key: FOOTBALL_DATA_KEY
+        sync: false
+      - key: UPSTASH_REDIS_URL
+        sync: false
+      - key: CF_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY
+        sync: false
+      - key: R2_SECRET_KEY
+        sync: false
+      - key: R2_BUCKET
+        value: mundial26-photos
+      - key: AFL_LEAGUE_ID
+        value: "1"
+      - key: AFL_SEASON
+        value: "2026"
+      - key: FRONTEND_URL
+        sync: false

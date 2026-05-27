@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 10% 4%;       /* #0a0a0f */
+    --foreground: 210 40% 98%;      /* #f8fafc */
+    --card: 240 10% 7%;             /* #111118 */
+    --card-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 240 10% 4%;
+    --secondary: 240 5% 12%;
+    --secondary-foreground: 210 40% 98%;
+    --muted-foreground: 215 20% 57%; /* #94a3b8 */
+    --border: 240 5% 16%;
+    --input: 240 5% 12%;
+    --ring: 210 40% 98%;
+    --accent: 240 5% 12%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .bg-card { background-color: hsl(var(--card)); }
+  .text-muted-foreground { color: hsl(var(--muted-foreground)); }
+  .bg-background { background-color: hsl(var(--background)); }
+}
+
+/* Goal flash animation */
+@keyframes goalFlash {
+  0% { background: rgba(34, 197, 94, 0); }
+  20% { background: rgba(34, 197, 94, 0.15); }
+  100% { background: rgba(34, 197, 94, 0); }
+}
+
+body.goal-flash {
+  animation: goalFlash 2s ease-out;
+}
