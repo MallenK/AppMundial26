@@ -25,8 +25,8 @@ router.get("/", withCache(TTL.PLAYER_LIST), async (req: Request, res: Response) 
   if (teamId) { params.push(teamId); sql += ` AND p.team_id = $${params.length}`; }
   if (position) { params.push(position); sql += ` AND p.position = $${params.length}`; }
 
-  params.push(parseInt(limit as string));
-  params.push(parseInt(offset as string));
+  params.push(parseInt(String(limit)));
+  params.push(parseInt(String(offset)));
   sql += ` ORDER BY COALESCE(ps.goals, 0) DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
   try {
@@ -49,7 +49,7 @@ router.get("/top-scorers", withCache(TTL.PLAYER_STATS), async (_req: Request, re
 
 // ─── GET /players/:id ─────────────────────────────────────────────────────────
 router.get("/:id", withCache(TTL.PLAYER_LIST), async (req: Request, res: Response) => {
-  const playerId = parseInt(req.params.id, 10);
+  const playerId = parseInt(String(req.params.id), 10);
 
   try {
     const { rows } = await query(
@@ -73,7 +73,7 @@ router.get("/:id", withCache(TTL.PLAYER_LIST), async (req: Request, res: Respons
 
 // ─── GET /players/compare?ids=1,2 ────────────────────────────────────────────
 router.get("/compare", withCache(300), async (req: Request, res: Response) => {
-  const idsParam = req.query.ids as string;
+  const idsParam = String(req.query.ids ?? "");
   if (!idsParam) { res.status(400).json({ error: "ids param required" }); return; }
 
   const ids = idsParam

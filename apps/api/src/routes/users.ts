@@ -175,7 +175,7 @@ router.get("/:id/followers", async (req: Request, res: Response) => {
        WHERE f.following_id=$1
        ORDER BY u.total_points DESC
        LIMIT $2 OFFSET $3`,
-      [req.params.id, parseInt(limit as string), parseInt(offset as string)]
+      [req.params.id, parseInt(String(limit)), parseInt(String(offset))]
     );
     res.json({ users: rows });
   } catch (err: any) {
@@ -194,7 +194,7 @@ router.get("/:id/following", async (req: Request, res: Response) => {
        WHERE f.follower_id=$1
        ORDER BY u.total_points DESC
        LIMIT $2 OFFSET $3`,
-      [req.params.id, parseInt(limit as string), parseInt(offset as string)]
+      [req.params.id, parseInt(String(limit)), parseInt(String(offset))]
     );
     res.json({ users: rows });
   } catch (err: any) {

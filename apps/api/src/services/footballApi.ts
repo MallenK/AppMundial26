@@ -45,7 +45,7 @@ class RateLimitedQueue {
     this.intervalMs = Math.ceil((60 * 1000) / callsPerMinute);
   }
 
-  enqueue<T>(task: QueuedTask): Promise<T> {
+  enqueue<T = any>(task: QueuedTask): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.push(async () => {
         try {

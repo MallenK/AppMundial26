@@ -64,8 +64,8 @@ router.get("/", async (req: Request, res: Response) => {
     sql += ` AND m.stage = $${params.length}`;
   }
 
-  params.push(parseInt(limit as string, 10));
-  params.push(parseInt(offset as string, 10));
+  params.push(parseInt(String(limit), 10));
+  params.push(parseInt(String(offset), 10));
   sql += ` ORDER BY m.utc_date ASC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
   try {
@@ -78,7 +78,7 @@ router.get("/", async (req: Request, res: Response) => {
 
 // ─── GET /matches/:id — full match detail ────────────────────────────────────
 router.get("/:id", optionalAuth, async (req: Request, res: Response) => {
-  const matchId = parseInt(req.params.id, 10);
+  const matchId = parseInt(String(req.params.id), 10);
   if (isNaN(matchId)) {
     res.status(400).json({ error: "Invalid match ID" });
     return;
@@ -168,7 +168,7 @@ router.get("/:id", optionalAuth, async (req: Request, res: Response) => {
 
 // ─── GET /matches/:id/events ──────────────────────────────────────────────────
 router.get("/:id/events", withCache(TTL.LIVE_MATCH), async (req: Request, res: Response) => {
-  const matchId = parseInt(req.params.id, 10);
+  const matchId = parseInt(String(req.params.id), 10);
   try {
     const { rows: matchRow } = await query(
       "SELECT afl_id FROM matches WHERE id=$1", [matchId]
@@ -190,7 +190,7 @@ router.get("/:id/events", withCache(TTL.LIVE_MATCH), async (req: Request, res: R
 
 // ─── GET /matches/:id/lineups ─────────────────────────────────────────────────
 router.get("/:id/lineups", withCache(120), async (req: Request, res: Response) => {
-  const matchId = parseInt(req.params.id, 10);
+  const matchId = parseInt(String(req.params.id), 10);
   try {
     const { rows } = await query("SELECT afl_id FROM matches WHERE id=$1", [matchId]);
     if (!rows.length) { res.status(404).json({ error: "Not found" }); return; }
@@ -203,7 +203,7 @@ router.get("/:id/lineups", withCache(120), async (req: Request, res: Response) =
 
 // ─── GET /matches/:id/stats ───────────────────────────────────────────────────
 router.get("/:id/stats", withCache(TTL.LIVE_MATCH), async (req: Request, res: Response) => {
-  const matchId = parseInt(req.params.id, 10);
+  const matchId = parseInt(String(req.params.id), 10);
   try {
     const { rows } = await query("SELECT afl_id FROM matches WHERE id=$1", [matchId]);
     if (!rows.length) { res.status(404).json({ error: "Not found" }); return; }

@@ -21,7 +21,7 @@ export default function MatchPage() {
     queryFn: () => matchesApi.getById(matchId),
     select: (res) => res.data,
     refetchInterval: (q) => {
-      const status = q.state.data?.match?.status;
+      const status = (q.state.data as any)?.match?.status;
       return ["LIVE", "IN_PLAY", "PAUSED"].includes(status) ? 30_000 : false;
     },
   });

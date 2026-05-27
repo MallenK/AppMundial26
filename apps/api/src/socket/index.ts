@@ -1,8 +1,7 @@
 import { Server as HttpServer } from "http";
 import { Server as SocketServer, Socket } from "socket.io";
-import { createClient } from "redis";
-import { createAdapter } from "@socket.io/redis-adapter";
 import { auth } from "../auth";
+// Single Render instance → in-memory adapter is sufficient (no Redis pub/sub needed)
 
 export let io: SocketServer;
 
@@ -10,9 +9,16 @@ export let io: SocketServer;
 const roomCounters = new Map<string, number>();
 
 export async function initSocket(httpServer: HttpServer): Promise<SocketServer> {
+  const allowedOrigins = [
+    process.env.FRONTEND_URL ?? "http://localhost:5173",
+    process.env.BACKEND_URL ?? "http://localhost:3001",
+    "http://localhost:5173",
+    "http://localhost:3001",
+  ].filter(Boolean);
+
   io = new SocketServer(httpServer, {
     cors: {
-      origin: process.env.FRONTEND_URL ?? "http://localhost:5173",
+      origin: allowedOrigins,
       credentials: true,
     },
     pingTimeout: 20000,
@@ -20,19 +26,7 @@ export async function initSocket(httpServer: HttpServer): Promise<SocketServer> 
     transports: ["websocket", "polling"],
   });
 
-  // Redis pub/sub adapter — enables horizontal scaling across server instances
-  try {
-    const pubClient = createClient({ url: process.env.UPSTASH_REDIS_URL });
-    const subClient = pubClient.duplicate();
-    await Promise.all([pubClient.connect(), subClient.connect()]);
-    io.adapter(createAdapter(pubClient, subClient));
-    console.log("[Socket.io] Redis adapter connected");
-  } catch (err: any) {
-    console.warn("[Socket.io] Redis adapter failed, using in-memory:", err.message);
-    // Falls back to in-memory adapter — fine for single instance
-  }
-
-  // Optional: auth middleware (only validate if token provided)
+  // Optional: attach user identity if session cookie present
   io.use(async (socket: Socket, next) => {
     const token = socket.handshake.auth?.token as string | undefined;
     if (token) {
@@ -53,8 +47,6 @@ export async function initSocket(httpServer: HttpServer): Promise<SocketServer> 
   });
 
   io.on("connection", (socket: Socket) => {
-    const userId = (socket as any).userId as string | undefined;
-
     // ── Match room ──────────────────────────────────────────
     socket.on("match:join", (matchId: number) => {
       const room = `match:${matchId}`;
@@ -71,10 +63,8 @@ export async function initSocket(httpServer: HttpServer): Promise<SocketServer> 
       io.to(room).emit("room:count", { matchId, count });
     });
 
-    // ── Disconnect cleanup ───────────────────────────────────
     socket.on("disconnect", () => {
-      // Socket.io auto-removes from rooms; update counters
-      for (const [room, count] of roomCounters) {
+      for (const [room] of roomCounters) {
         if (!io.sockets.adapter.rooms.has(room)) {
           roomCounters.set(room, 0);
         }
@@ -82,11 +72,11 @@ export async function initSocket(httpServer: HttpServer): Promise<SocketServer> 
     });
   });
 
-  console.log("[Socket.io] Initialized");
+  console.log("[Socket.io] Initialized (in-memory adapter)");
   return io;
 }
 
-// ── Broadcast helpers (called from sync jobs / route handlers) ────────────────
+// ── Broadcast helpers ─────────────────────────────────────────────────────────
 
 export function broadcastMatchUpdate(payload: {
   matchId: number;

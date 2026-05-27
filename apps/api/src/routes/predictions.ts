@@ -79,7 +79,7 @@ router.get("/my", requireAuth, async (req: Request, res: Response) => {
        WHERE p.user_id = $1
        ORDER BY m.utc_date DESC
        LIMIT $2 OFFSET $3`,
-      [req.user!.id, parseInt(limit as string), parseInt(offset as string)]
+      [req.user!.id, parseInt(String(limit)), parseInt(String(offset))]
     );
 
     res.json({ predictions: rows });
@@ -106,7 +106,7 @@ router.get(
          GROUP BY u.id
          ORDER BY u.total_points DESC
          LIMIT $1 OFFSET $2`,
-        [parseInt(limit as string), parseInt(offset as string)]
+        [parseInt(String(limit)), parseInt(String(offset))]
       );
 
       res.json({ ranking: rows });
@@ -147,7 +147,7 @@ router.get("/ranking/friends", requireAuth, async (req: Request, res: Response) 
 
 // ─── GET /predictions/match/:matchId — all predictions for a match ────────────
 router.get("/match/:matchId", withCache(60), async (req: Request, res: Response) => {
-  const matchId = parseInt(req.params.matchId, 10);
+  const matchId = parseInt(String(req.params.matchId), 10);
 
   try {
     const { rows } = await query(

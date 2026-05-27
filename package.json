@@ -8,5 +8,8 @@
     "lint": "pnpm --filter './apps/*' lint",
     "type-check": "pnpm --filter './apps/*' type-check"
   },
-  "packageManager": "pnpm@11.3.0"
+  "packageManager": "pnpm@11.3.0",
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "better-sqlite3", "sharp"]
+  }
 }

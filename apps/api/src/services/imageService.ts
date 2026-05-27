@@ -1,74 +1,68 @@
-import {
-  S3Client,
-  PutObjectCommand,
-  DeleteObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { randomUUID } from "crypto";
+/**
+ * Image service — local /uploads folder served as static files.
+ *
+ * ⚠️  IMPORTANTE: En Render free tier el filesystem es EFÍMERO.
+ *     Las fotos se pierden en cada deploy/restart.
+ *
+ * Opciones para producción real:
+ *   A) Render Starter ($7/mes) + Persistent Disk ($1/GB) → misma lógica
+ *   B) Migrar a Supabase Storage (1 GB gratis, permanente) — sin coste
+ *
+ * Para MVP / desarrollo local: funciona perfectamente.
+ */
 
-const r2 = new S3Client({
-  region: "auto",
-  endpoint: `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY ?? "",
-    secretAccessKey: process.env.R2_SECRET_KEY ?? "",
+import path from "path";
+import fs from "fs";
+import { randomUUID } from "crypto";
+import multer, { StorageEngine } from "multer";
+
+export const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
+
+// Create dir if missing
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+
+const storage: StorageEngine = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
+    cb(null, `${randomUUID()}${ext}`);
   },
 });
 
-const BUCKET = process.env.R2_BUCKET ?? "mundial26-photos";
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export const uploadMiddleware = multer({
+  storage,
+  limits: { fileSize: MAX_SIZE_BYTES },
+  fileFilter: (_req, file, cb) => {
+    if (ALLOWED_MIME.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Tipo no permitido: ${file.mimetype}`));
+    }
+  },
+});
 
-export function generateR2Key(matchId: number, userId: string, ext: string): string {
-  const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  return `photos/${date}/${matchId}/${userId}/${randomUUID()}.${ext}`;
+/** Returns the public URL for a stored file */
+export function getPublicUrl(filename: string): string {
+  const base = (process.env.BACKEND_URL ?? "http://localhost:3001").replace(/\/$/, "");
+  return `${base}/uploads/${filename}`;
 }
 
-export function getPublicUrl(key: string): string {
-  // r2.dev public bucket URL — configure in Cloudflare dashboard
-  return `https://pub-${process.env.CF_ACCOUNT_ID}.r2.dev/${key}`;
-}
-
-/**
- * Generate a presigned PUT URL so the frontend uploads directly to R2.
- * This avoids streaming the file through our backend (saves RAM + bandwidth).
- */
-export async function getPresignedUploadUrl(
-  key: string,
-  contentType: string
-): Promise<{ uploadUrl: string; publicUrl: string }> {
-  if (!ALLOWED_TYPES.includes(contentType)) {
-    throw new Error(`Content type not allowed: ${contentType}`);
+/** Delete a file from disk */
+export function deletePhoto(filename: string): void {
+  try {
+    const filepath = path.join(UPLOADS_DIR, filename);
+    if (fs.existsSync(filepath)) fs.unlinkSync(filepath);
+  } catch (err: any) {
+    console.warn("[imageService] Delete error:", err.message);
   }
-
-  const command = new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    ContentType: contentType,
-    ContentLengthRange: { min: 1, max: MAX_SIZE_BYTES } as any,
-    Metadata: { uploadedAt: new Date().toISOString() },
-  });
-
-  const uploadUrl = await getSignedUrl(r2, command, { expiresIn: 300 }); // 5 min
-  const publicUrl = getPublicUrl(key);
-
-  return { uploadUrl, publicUrl };
 }
 
-/**
- * Delete a photo from R2.
- */
-export async function deletePhoto(key: string): Promise<void> {
-  await r2.send(
-    new DeleteObjectCommand({ Bucket: BUCKET, Key: key })
-  );
-}
-
-export function getExtensionFromMime(mimeType: string): string {
-  const map: Record<string, string> = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-  };
-  return map[mimeType] ?? "jpg";
+/** Extract filename from a full URL */
+export function filenameFromUrl(url: string): string {
+  return url.split("/").pop() ?? "";
 }

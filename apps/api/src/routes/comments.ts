@@ -15,7 +15,7 @@ const CommentSchema = z.object({
 
 // ─── GET /comments/match/:matchId ─────────────────────────────────────────────
 router.get("/match/:matchId", optionalAuth, async (req: Request, res: Response) => {
-  const matchId = parseInt(req.params.matchId, 10);
+  const matchId = parseInt(String(req.params.matchId), 10);
   const { limit = "30", offset = "0", parentId } = req.query;
 
   try {
@@ -35,14 +35,14 @@ router.get("/match/:matchId", optionalAuth, async (req: Request, res: Response) 
     const params: any[] = [matchId];
 
     if (parentId && parentId !== "null") {
-      params.push(parseInt(parentId as string));
+      params.push(parseInt(String(parentId)));
       sql += ` AND c.parent_id = $${params.length}`;
     } else {
       sql += ` AND c.parent_id IS NULL`;
     }
 
-    params.push(parseInt(limit as string));
-    params.push(parseInt(offset as string));
+    params.push(parseInt(String(limit)));
+    params.push(parseInt(String(offset)));
     sql += ` ORDER BY c.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
     const { rows } = await query(sql, params);
@@ -58,7 +58,7 @@ router.post(
   requireAuth,
   commentLimiter,
   async (req: Request, res: Response) => {
-    const matchId = parseInt(req.params.matchId, 10);
+    const matchId = parseInt(String(req.params.matchId), 10);
     const parsed = CommentSchema.safeParse(req.body);
 
     if (!parsed.success) {
@@ -123,7 +123,7 @@ router.post(
 
 // ─── POST /comments/:id/like ──────────────────────────────────────────────────
 router.post("/:id/like", requireAuth, async (req: Request, res: Response) => {
-  const commentId = parseInt(req.params.id, 10);
+  const commentId = parseInt(String(req.params.id), 10);
 
   try {
     await withTransaction(async (client) => {
@@ -172,7 +172,7 @@ router.post("/:id/like", requireAuth, async (req: Request, res: Response) => {
 
 // ─── DELETE /comments/:id ─────────────────────────────────────────────────────
 router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
-  const commentId = parseInt(req.params.id, 10);
+  const commentId = parseInt(String(req.params.id), 10);
 
   try {
     const { rows } = await query(
